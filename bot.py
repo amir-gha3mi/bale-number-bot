@@ -8,7 +8,7 @@ import os
 TOKEN = "919464485:oQH2OnSnihbXVUBepUf-MpYozwURFQIH7kE"
 
 # لینک دیتابیس Supabase (همون که کپی کردی)
-DATABASE_URL = "postgresql://postgres:S66b@sfxi4a9@db.cocysbrmnfdymaybmbvs.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://postgres.cocysbrmnfdymaybmbvs:S66b@sfxi4a9@aws-1-eu-north-1.pooler.supabase.com:5432/postgres"
 
 async def handle(request):
     data = await request.json()
@@ -69,3 +69,4 @@ app.router.add_post(f'/{TOKEN}', handle)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     web.run_app(app, host="0.0.0.0", port=port)
+
