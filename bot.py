@@ -45,7 +45,7 @@ async def handle(request):
                 conn = await asyncpg.connect(DATABASE_URL)
                 await conn.execute(
                     "INSERT INTO tbl_GetNumberTests (user_id, username, created_at) VALUES ($1, $2, $3)",
-                    user_id, username or None, datetime.datetime.now(tz.gettz('Asia/Tehran'))
+                    user_id, username or None, datetime.datetime.now(datetime.timezone.utc))
                 )
                 await conn.close()
                 success = True
@@ -83,3 +83,4 @@ app.router.add_post(f'/{TOKEN}', handle)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     web.run_app(app, host="0.0.0.0", port=port)
+
