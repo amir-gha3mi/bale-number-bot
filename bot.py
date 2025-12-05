@@ -44,7 +44,8 @@ async def handle(request):
                     await conn.close()
                     await send_message(chat_id, f"عدد {text} با موفقیت ثبت شد! ✅")
                 except Exception as e:
-                    await send_message(chat_id, "خطا در ثبت. دوباره امتحان کن.")
+                    error_msg = f"خطا در ثبت: {str(e)[:100]}"  # فقط ۱۰۰ کاراکتر اول
+                    await send_message(chat_id, error_msg)
                     print("DB Error:", e)  # برای لاگ
                 finally:
                     clear_state(user_id)
@@ -74,3 +75,4 @@ app.router.add_post(f'/{TOKEN}', handle)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     web.run_app(app, host="0.0.0.0", port=port)
+
