@@ -10,17 +10,6 @@ TOKEN = "919464485:oQH2OnSnihbXVUBepUf-MpYozwURFQIH7kE"
 # لینک دیتابیس Supabase (همون که کپی کردی)
 DATABASE_URL = "postgresql://postgres:S66b@sfxi4a9@db.cocysbrmnfdymaybmbvs.supabase.co:5432/postgres"
 
-# اتصال به دیتابیس (یک بار موقع استارت)
-pool = None
-
-async def connect_db(app):
-    global pool
-    pool = await asyncpg.create_pool(DATABASE_URL)
-
-async def close_db(app):
-    if pool:
-        await pool.close()
-
 async def handle(request):
     data = await request.json()
     
@@ -28,7 +17,7 @@ async def handle(request):
         msg = data["message"]
         chat_id = msg["chat"]["id"]
         user_id = msg["from"]["id"]
-        username = msg["from"].get("username", "")
+        username = msg["from"].get("username", "") or ""
         text = msg.get("text", "").strip()
 
         if text == "/start":
@@ -44,17 +33,23 @@ async def handle(request):
 
         elif get_state(user_id) == "waiting":
             if text.isdigit():
-                # ثبت در Supabase
-                async with pool.acquire() as conn:
+                # اینجا فقط وقتی نیاز داریم به دیتابیس وصل می‌شیم
+                try:
+                    conn = await asyncpg.connect(DATABASE_URL)
                     await conn.execute(
                         """INSERT INTO tbl_GetNumberTests (user_id, username, created_at) 
                            VALUES ($1, $2, $3)""",
                         user_id, username or None, datetime.datetime.now(tz.gettz('Asia/Tehran'))
                     )
-                await send_message(chat_id, f"عدد {text} با موفقیت ثبت شد! ✅")
-                clear_state(user_id)
+                    await conn.close()
+                    await send_message(chat_id, f"عدد {text} با موفقیت ثبت شد! ✅")
+                except Exception as e:
+                    await send_message(chat_id, "خطا در ثبت. دوباره امتحان کن.")
+                    print("DB Error:", e)  # برای لاگ
+                finally:
+                    clear_state(user_id)
             else:
-                await send_message(chat_id, "لطفاً فقط عدد بفرست (مثلاً ۱۲۳)")
+                await send_message(chat_id, "لطفاً فقط عدد بفرست")
 
     return web.Response(text="ok")
 
@@ -67,16 +62,15 @@ async def send_message(chat_id, text, reply_markup=None):
         async with session.post(url, json=data):
             pass
 
-# ذخیره وضعیت موقت (فقط برای این که بدونه منتظر عدده)
+# وضعیت موقت
 STATE = {}
 def save_state(uid, state): STATE[uid] = state
 def get_state(uid): return STATE.get(uid)
 def clear_state(uid): STATE.pop(uid, None)
 
 app = web.Application()
-app.on_startup.append(connect_db)
-app.on_cleanup.append(close_db)
 app.router.add_post(f'/{TOKEN}', handle)
 
 if __name__ == "__main__":
-    web.run_app(app, port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    web.run_app(app, host="0.0.0.0", port=port)
